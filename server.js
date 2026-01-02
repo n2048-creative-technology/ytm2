@@ -211,6 +211,8 @@ wss.on("connection", (ws) => {
       ws.send(JSON.stringify({ type: "registered", id }));
       console.log(`Registered ${role} ${id}`);
       if (role === "phone") {
+        // Default behavior: self-route so the phone sees its own feed even without admin
+        applyRouteByIds(id, id);
         broadcastPhoneList();
       }
       return;
