@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Local VR Router - Admin</title>
+  <title>You through me</title>
   <link rel="stylesheet" href="/admin.css">
   <script src="/qrcode.js" defer></script>
   <script src="/admin.js" defer></script>
@@ -16,32 +16,35 @@
 
   <main>
     <section>
-      <h2>Connected Phones</h2>
-      <div id="qr-wrapper">
-        <p>Scan to open the phone client:</p>
-        <canvas id="qrCanvas" width="128" height="128"></canvas>
-        <p id="qrUrl"></p>
-      </div>
+      <h2>Global Options</h2>
       <div id="global-controls">
         <label>
           <input type="checkbox" id="globalLocalView">
           Toggle all Local Views
         </label>
-        <label style="margin-left:12px;">
+        <label>
           <input type="checkbox" id="globalOverlay">
           Toggle all Overlays
         </label>
-        <button id="btnRandomizeSenders" style="margin-left:12px;">Randomize senders</button>
-        <button id="btnSelfRouteAll" style="margin-left:12px;">Self view all</button>
-        <label style="margin-left:12px;">
+        <button id="btnRandomizeSenders">Randomize senders</button>
+        <button id="btnSelfRouteAll">Self view all</button>
+        <label>
           Send from:
           <select id="globalBroadcastSelect"></select>
         </label>
-        <button id="btnBroadcastRandom" style="margin-left:8px;">Choose random</button>
-        <label style="margin-left:12px;">
+        <button id="btnBroadcastRandom">Choose random</button>
+        <label>
           <input type="checkbox" id="globalVrMode" checked>
           VR mode (split) for all
         </label>
+      </div>
+    </section>
+    <section>
+      <h2>Connected Phones</h2>
+      <div id="qr-wrapper">
+        <p>Scan to open the phone client:</p>
+        <canvas id="qrCanvas" width="128" height="128"></canvas>
+        <p id="qrUrl"></p>
       </div>
       <div class="table-wrapper">
         <table id="phonesTable">
@@ -50,9 +53,6 @@
             <th>Preview</th>
             <th>ID</th>
             <th>Name</th>
-            <th>Status</th>
-            <th>Sending To</th>
-            <th>Receiving From</th>
             <th>Sender</th>
             <th>Local View</th>
             <th>Overlay</th>

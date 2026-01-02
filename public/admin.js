@@ -40,8 +40,8 @@ function renderPhones() {
       previewCache.set(phone.id, phone.preview);
     }
     const tr = document.createElement("tr");
-    if (phone.status.includes("sending")) tr.classList.add("sending");
-    if (phone.status.includes("receiving")) tr.classList.add("receiving");
+    if (phone.status && phone.status.includes("sending")) tr.classList.add("sending");
+    if (phone.status && phone.status.includes("receiving")) tr.classList.add("receiving");
 
     const previewTd = document.createElement("td");
     const previewImg = document.createElement("img");
@@ -120,21 +120,7 @@ function renderPhones() {
     }
     tr.appendChild(nameTd);
 
-    const statusTd = document.createElement("td");
-    statusTd.textContent = phone.status;
-    tr.appendChild(statusTd);
-
-    const sendingTd = document.createElement("td");
-    if (Array.isArray(phone.sendingTo) && phone.sendingTo.length > 0) {
-      sendingTd.textContent = phone.sendingTo.join(", ");
-    } else {
-      sendingTd.textContent = "-";
-    }
-    tr.appendChild(sendingTd);
-
-    const receivingTd = document.createElement("td");
-    receivingTd.textContent = phone.receivingFrom || "-";
-    tr.appendChild(receivingTd);
+    // Removed Status, Sending To, Receiving From columns
 
     const controlTd = document.createElement("td");
     const select = document.createElement("select");

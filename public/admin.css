@@ -23,6 +23,17 @@ section {
   margin-bottom: 1rem;
 }
 
+#global-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#global-controls label,
+#global-controls button {
+  width: fit-content;
+}
+
 .table-wrapper {
   width: 100%;
   overflow-x: visible;
