@@ -162,7 +162,7 @@ function setVrMode(isVr) {
 
 async function getCameraStream() {
   if (cameraStream) return cameraStream;
-  // Only request the environment (rear) camera
+  // Only request the environment (rear) camera; add a targeted fallback that still selects a rear deviceId
   const attempts = [
     { video: { facingMode: { exact: "environment" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, audio: false },
     { video: { facingMode: { exact: "environment" } }, audio: false },
@@ -179,11 +179,38 @@ async function getCameraStream() {
     } catch (err) {
       lastErr = err;
       console.warn("getUserMedia failed", err && err.name, err && err.message);
+      // If camera might be busy or overconstrained, try a rear deviceId by label
+      if (err && (err.name === "NotReadableError" || err.name === "OverconstrainedError" || err.name === "NotFoundError")) {
+        try {
+          const rear = await findRearCamera();
+          if (rear) {
+            // stop any partial tracks just in case
+            try { if (cameraStream) cameraStream.getTracks().forEach(t => t.stop()); } catch {}
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: rear.deviceId } }, audio: false });
+            setVideoStream(localVideos, cameraStream);
+            setupPreviewPipeline();
+            setError("");
+            return cameraStream;
+          }
+        } catch (e) {
+          console.warn("Rear device fallback failed", e && e.name, e && e.message);
+        }
+      }
     }
   }
   const detail = lastErr && lastErr.name ? ` (${lastErr.name})` : "";
-  setError(`Camera access failed${detail}. Tap the screen and try again.`);
+  setError(`Camera access failed${detail}. Close other apps using the camera and tap again.`);
   throw lastErr || new Error("getUserMedia failed");
+}
+
+async function findRearCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return null;
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const videos = devices.filter((d) => d.kind === "videoinput");
+  if (!videos.length) return null;
+  const backRegex = /(back|rear|environment)/i;
+  const rear = videos.find((d) => backRegex.test(d.label || ""));
+  return rear || null;
 }
 
 function setupPreviewPipeline() {
