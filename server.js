@@ -38,7 +38,7 @@ if (httpsKeyPath && httpsCertPath) {
 }
 
 const wss = new WebSocketServer({ server, path: "/ws" });
-const HEARTBEAT_INTERVAL_MS = Number(process.env.HEARTBEAT_INTERVAL_MS || 5000);
+const HEARTBEAT_INTERVAL_MS = Number(process.env.HEARTBEAT_INTERVAL_MS || 1000);
 const clients = new Map();
 let clientCounter = 1;
 

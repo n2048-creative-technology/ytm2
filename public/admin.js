@@ -7,6 +7,8 @@ const globalLocalView = document.getElementById("globalLocalView");
 const globalOverlay = document.getElementById("globalOverlay");
 const btnRandomizeSenders = document.getElementById("btnRandomizeSenders");
 const btnSelfRouteAll = document.getElementById("btnSelfRouteAll");
+const globalBroadcastSelect = document.getElementById("globalBroadcastSelect");
+const btnBroadcastRandom = document.getElementById("btnBroadcastRandom");
 
 let ws;
 let phones = [];
@@ -227,6 +229,28 @@ function renderPhones() {
   }
   if (btnSelfRouteAll) {
     btnSelfRouteAll.disabled = phones.length === 0;
+  }
+  if (globalBroadcastSelect) {
+    // Rebuild options while preserving selection if still present
+    const prev = globalBroadcastSelect.value;
+    globalBroadcastSelect.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = phones.length ? "Select sender" : "No clients";
+    globalBroadcastSelect.appendChild(placeholder);
+    phones.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `${p.name} (${p.id})`;
+      globalBroadcastSelect.appendChild(opt);
+    });
+    if (prev && phones.some((p) => p.id === prev)) {
+      globalBroadcastSelect.value = prev;
+    }
+    globalBroadcastSelect.disabled = phones.length === 0;
+  }
+  if (btnBroadcastRandom) {
+    btnBroadcastRandom.disabled = phones.length === 0;
   }
 }
 
@@ -453,4 +477,30 @@ function selfRouteAll() {
 
 if (btnSelfRouteAll) {
   btnSelfRouteAll.addEventListener("click", selfRouteAll);
+}
+
+function broadcastFrom(senderId) {
+  if (!senderId) return;
+  setAdminError("");
+  // Route selected sender to every phone (including itself)
+  phones.forEach((p) => {
+    handleRouteSelection(p.id, senderId);
+  });
+}
+
+if (globalBroadcastSelect) {
+  globalBroadcastSelect.addEventListener("change", () => {
+    if (!globalBroadcastSelect.value) return;
+    broadcastFrom(globalBroadcastSelect.value);
+  });
+}
+
+if (btnBroadcastRandom) {
+  btnBroadcastRandom.addEventListener("click", () => {
+    if (phones.length === 0) return;
+    const idx = Math.floor(Math.random() * phones.length);
+    const id = phones[idx].id;
+    if (globalBroadcastSelect) globalBroadcastSelect.value = id;
+    broadcastFrom(id);
+  });
 }
