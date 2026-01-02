@@ -72,6 +72,12 @@ function renderPhones() {
           });
         } catch {}
       });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          okBtn.click();
+        }
+      });
       const okBtn = document.createElement("button");
       okBtn.textContent = "OK";
       okBtn.style.marginLeft = "6px";
