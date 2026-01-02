@@ -34,6 +34,23 @@ section {
   width: fit-content;
 }
 
+.overlay-text-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.overlay-text-controls input[type="text"] {
+  width: 280px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #2a3c59;
+  background: #0f1724;
+  color: #f7fbff;
+}
+
 .table-wrapper {
   width: 100%;
   overflow-x: visible;

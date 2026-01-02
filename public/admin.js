@@ -9,6 +9,9 @@ const btnRandomizeSenders = document.getElementById("btnRandomizeSenders");
 const btnSelfRouteAll = document.getElementById("btnSelfRouteAll");
 const globalBroadcastSelect = document.getElementById("globalBroadcastSelect");
 const btnBroadcastRandom = document.getElementById("btnBroadcastRandom");
+const overlayTextInput = document.getElementById("overlayTextInput");
+const overlayTextTarget = document.getElementById("overlayTextTarget");
+const btnSendOverlayText = document.getElementById("btnSendOverlayText");
 
 let ws;
 let phones = [];
@@ -253,6 +256,24 @@ function renderPhones() {
       globalBroadcastSelect.value = prev;
     }
     globalBroadcastSelect.disabled = phones.length === 0;
+  }
+  if (overlayTextTarget) {
+    const prev = overlayTextTarget.value;
+    overlayTextTarget.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = "*";
+    allOpt.textContent = "All";
+    overlayTextTarget.appendChild(allOpt);
+    phones.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `${p.name} (${p.id})`;
+      overlayTextTarget.appendChild(opt);
+    });
+    if (prev && (prev === "*" || phones.some((p) => p.id === prev))) {
+      overlayTextTarget.value = prev;
+    }
+    overlayTextTarget.disabled = phones.length === 0;
   }
   if (btnBroadcastRandom) {
     btnBroadcastRandom.disabled = phones.length === 0;
@@ -503,6 +524,29 @@ if (globalBroadcastSelect) {
   globalBroadcastSelect.addEventListener("change", () => {
     if (!globalBroadcastSelect.value) return;
     broadcastFrom(globalBroadcastSelect.value);
+  });
+}
+
+function sendOverlayText() {
+  const txt = (overlayTextInput && overlayTextInput.value) ? overlayTextInput.value.trim() : "";
+  if (!txt) return;
+  const duration = 3000;
+  if (!overlayTextTarget || overlayTextTarget.value === "*") {
+    sendClientControlAll("overlay-text", { text: txt, duration });
+  } else {
+    sendClientControl(overlayTextTarget.value, "overlay-text", { text: txt, duration });
+  }
+}
+
+if (btnSendOverlayText) {
+  btnSendOverlayText.addEventListener("click", sendOverlayText);
+}
+if (overlayTextInput) {
+  overlayTextInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendOverlayText();
+    }
   });
 }
 

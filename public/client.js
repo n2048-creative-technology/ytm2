@@ -9,6 +9,8 @@ const remoteVideoLeft = document.getElementById("left-eye-remote-video");
 const remoteVideoRight = document.getElementById("right-eye-remote-video");
 const localVideoLeft = document.getElementById("left-eye-local-video");
 const localVideoRight = document.getElementById("right-eye-local-video");
+const leftTextOverlay = document.getElementById("left-text-overlay");
+const rightTextOverlay = document.getElementById("right-text-overlay");
 
 const DEVICE_ID_KEY = "local-vr-router-device-id";
 const DEVICE_NAME_KEY = "local-vr-router-device-name";
@@ -37,6 +39,7 @@ const localViewCheckbox = document.getElementById("localViewCheckbox");
 let knownPhones = [];
 let wakeLock = null;
 const wakeLockStatusEl = document.getElementById("wakeLockStatus");
+let overlayTextTimer = null;
 
 async function requestWakeLock() {
   try {
@@ -185,6 +188,28 @@ function setVrMode(isVr) {
   document.body.classList.toggle("panorama", !vrMode);
   if (vrModeCheckbox) vrModeCheckbox.checked = vrMode;
   if (changed) sendStateUpdate();
+}
+
+function showOverlayText(text, durationMs = 3000) {
+  // Clear any existing timer
+  if (overlayTextTimer) {
+    clearTimeout(overlayTextTimer);
+    overlayTextTimer = null;
+  }
+  // Update text content on both overlays
+  if (leftTextOverlay) leftTextOverlay.textContent = text || "";
+  if (rightTextOverlay) rightTextOverlay.textContent = text || "";
+  // Show
+  if (leftTextOverlay) leftTextOverlay.classList.toggle("visible", !!text);
+  if (rightTextOverlay) rightTextOverlay.classList.toggle("visible", !!text && vrMode);
+  // In panorama, right overlay is hidden by CSS; left expands to full width
+  if (text) {
+    overlayTextTimer = setTimeout(() => {
+      if (leftTextOverlay) leftTextOverlay.classList.remove("visible");
+      if (rightTextOverlay) rightTextOverlay.classList.remove("visible");
+      overlayTextTimer = null;
+    }, durationMs);
+  }
 }
 
 async function getCameraStream() {
@@ -542,6 +567,12 @@ function connectWebSocket() {
               setVrMode(!!data.vr);
             }
             break;
+          case "overlay-text": {
+            const txt = typeof data.text === 'string' ? data.text : '';
+            const dur = typeof data.duration === 'number' ? data.duration : 3000;
+            showOverlayText(txt, dur);
+            break;
+          }
           case "reset-sender":
             if (data.peerId) {
               stopSendingToPeer(data.peerId);
