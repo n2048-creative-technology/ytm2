@@ -12,7 +12,6 @@ const localVideoRight = document.getElementById("right-eye-local-video");
 
 const DEVICE_ID_KEY = "local-vr-router-device-id";
 const DEVICE_NAME_KEY = "local-vr-router-device-name";
-const CAMERA_DEVICE_KEY = "local-vr-router-camera-device-id";
 const PREVIEW_INTERVAL_MS = 100;
 
 let ws;
@@ -163,14 +162,12 @@ function setVrMode(isVr) {
 
 async function getCameraStream() {
   if (cameraStream) return cameraStream;
-  const savedDeviceId = localStorage.getItem(CAMERA_DEVICE_KEY);
+  // Only request the environment (rear) camera
   const attempts = [
     { video: { facingMode: { exact: "environment" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, audio: false },
     { video: { facingMode: { exact: "environment" } }, audio: false },
-    savedDeviceId ? { video: { deviceId: { exact: savedDeviceId } }, audio: false } : null,
-    { video: { facingMode: { ideal: "environment" } }, audio: false },
-    { video: true, audio: false }
-  ].filter(Boolean);
+    { video: { facingMode: { ideal: "environment" } }, audio: false }
+  ];
   let lastErr = null;
   for (const constraints of attempts) {
     try {
@@ -178,12 +175,6 @@ async function getCameraStream() {
       setVideoStream(localVideos, cameraStream);
       setupPreviewPipeline();
       setError("");
-      // Try to ensure we use the back camera; if not, switch to one labeled back/rear
-      try {
-        await maybeSwitchToBackCamera();
-      } catch (e) {
-        console.warn("Back-camera switch attempt failed", e && e.name, e && e.message);
-      }
       return cameraStream;
     } catch (err) {
       lastErr = err;
@@ -193,48 +184,6 @@ async function getCameraStream() {
   const detail = lastErr && lastErr.name ? ` (${lastErr.name})` : "";
   setError(`Camera access failed${detail}. Tap the screen and try again.`);
   throw lastErr || new Error("getUserMedia failed");
-}
-
-async function maybeSwitchToBackCamera() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-  // Ensure labels are available (requires permission first)
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const videos = devices.filter((d) => d.kind === "videoinput");
-  if (videos.length === 0) return;
-  const backRegex = /(back|rear|environment)/i;
-  const frontRegex = /(front|user|selfie)/i;
-  const currentTrack = cameraStream && cameraStream.getVideoTracks()[0];
-  const currentSettings = currentTrack ? currentTrack.getSettings && currentTrack.getSettings() : null;
-  const currentDeviceId = (currentSettings && currentSettings.deviceId) || null;
-  const looksFront = currentTrack && frontRegex.test(currentTrack.label || "");
-  const looksBack = currentTrack && backRegex.test(currentTrack.label || "");
-
-  let target = videos.find((d) => backRegex.test(d.label || ""));
-  if (!target && videos.length === 1) {
-    // Single camera; assume it's the back if unknown
-    target = videos[0];
-  }
-  if (!target) return; // No clear back camera
-  if (currentDeviceId && target.deviceId === currentDeviceId && (looksBack || !looksFront)) {
-    // Already on the desired device (or ambiguous but not front)
-    localStorage.setItem(CAMERA_DEVICE_KEY, target.deviceId);
-    return;
-  }
-  try {
-    const newStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: target.deviceId } }, audio: false });
-    // Swap streams
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((t) => t.stop());
-    }
-    cameraStream = newStream;
-    setVideoStream(localVideos, cameraStream);
-    if (previewVideo) {
-      previewVideo.srcObject = cameraStream;
-    }
-    localStorage.setItem(CAMERA_DEVICE_KEY, target.deviceId);
-  } catch (err) {
-    console.warn("Unable to switch to back camera", err && err.name, err && err.message);
-  }
 }
 
 function setupPreviewPipeline() {
