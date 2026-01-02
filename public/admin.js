@@ -5,6 +5,7 @@ const qrCanvas = document.getElementById("qrCanvas");
 const qrUrlEl = document.getElementById("qrUrl");
 const globalLocalView = document.getElementById("globalLocalView");
 const globalOverlay = document.getElementById("globalOverlay");
+const btnRandomizeSenders = document.getElementById("btnRandomizeSenders");
 
 let ws;
 let phones = [];
@@ -220,6 +221,9 @@ function renderPhones() {
     globalOverlay.checked = all;
     globalOverlay.disabled = phones.length === 0;
   }
+  if (btnRandomizeSenders) {
+    btnRandomizeSenders.disabled = phones.length < 2;
+  }
 }
 
 function handleRouteSelection(receiverId, senderId) {
@@ -382,4 +386,55 @@ if (globalOverlay) {
   globalOverlay.addEventListener("change", () => {
     sendClientControlAll("set-overlay", { visible: globalOverlay.checked });
   });
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function computeDerangement(ids) {
+  const n = ids.length;
+  if (n < 2) return null;
+  const perm = shuffle([...Array(n).keys()]);
+  for (let i = 0; i < n; i++) {
+    if (perm[i] === i) {
+      const j = (i + 1) % n;
+      [perm[i], perm[j]] = [perm[j], perm[i]];
+    }
+  }
+  // Validate no fixed points
+  for (let i = 0; i < n; i++) {
+    if (perm[i] === i) return computeDerangement(ids); // rare, but retry
+  }
+  return perm.map((k) => ids[k]);
+}
+
+function randomizeSenders() {
+  if (phones.length < 2) {
+    setAdminError("Need at least 2 phones to randomize");
+    return;
+  }
+  setAdminError("");
+  const ids = phones.map((p) => p.id);
+  const senders = computeDerangement(ids);
+  if (!senders) return;
+  // First clear all receiving routes to ensure one-to-one mapping
+  ids.forEach((rid) => {
+    handleRouteSelection(rid, "");
+  });
+  // After a short delay, apply new mapping
+  setTimeout(() => {
+    ids.forEach((rid, idx) => {
+      const sid = senders[idx];
+      handleRouteSelection(rid, sid);
+    });
+  }, 150);
+}
+
+if (btnRandomizeSenders) {
+  btnRandomizeSenders.addEventListener("click", randomizeSenders);
 }
