@@ -155,7 +155,12 @@ wss.on("connection", (ws) => {
       if (assignedId) return;
       let requestedId = null;
       if (typeof message.id === "string" && message.id.trim().length > 0) {
-        requestedId = message.id.trim();
+        const trimmed = message.id.trim();
+        // Only allow up to 6 alphanumeric characters for client-provided IDs
+        const sanitized = trimmed.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6);
+        if (sanitized.length > 0) {
+          requestedId = sanitized;
+        }
       }
       let id = requestedId && !clients.has(requestedId)
         ? requestedId
