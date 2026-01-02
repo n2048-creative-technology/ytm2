@@ -36,6 +36,7 @@ const vrModeCheckbox = document.getElementById("vrModeCheckbox");
 const localViewCheckbox = document.getElementById("localViewCheckbox");
 let knownPhones = [];
 let wakeLock = null;
+const wakeLockStatusEl = document.getElementById("wakeLockStatus");
 
 async function requestWakeLock() {
   try {
@@ -44,10 +45,22 @@ async function requestWakeLock() {
     wakeLock.addEventListener('release', () => {
       // Wake Lock released
       wakeLock = null;
+      updateWakeLockStatus();
     });
+    updateWakeLockStatus();
   } catch (e) {
     console.warn('Wake Lock error', e && e.name, e && e.message);
+    updateWakeLockStatus();
   }
+}
+
+function updateWakeLockStatus() {
+  if (!wakeLockStatusEl) return;
+  if (!('wakeLock' in navigator)) {
+    wakeLockStatusEl.textContent = "Screen: Sleep allowed (not supported)";
+    return;
+  }
+  wakeLockStatusEl.textContent = wakeLock ? "Screen: Awake" : "Screen: Sleep allowed";
 }
 
 function setVideoStream(videos, stream) {
@@ -603,6 +616,7 @@ updateRoleDisplay();
 setOverlayVisibility(false);
 setLocalViewVisibility(false);
 setVrMode(true);
+updateWakeLockStatus();
 
 function handlePointerToggle(event) {
   if (!event.isPrimary) return;
