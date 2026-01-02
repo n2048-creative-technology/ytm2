@@ -12,6 +12,7 @@ const editingNameIds = new Set(); // ids currently being edited
 const pendingNameEdits = new Map(); // id -> pending string value
 const editingNameCursors = new Map(); // id -> { start, end }
 let focusedEditId = null; // last-focused editing name input id
+const selfRoutedIds = new Set(); // ids that were auto self-routed by this admin session
 
 function updateStatus(text) {
   statusEl.textContent = `Status: ${text}`;
@@ -228,6 +229,18 @@ function connectWebSocket() {
       setAdminError("");
     } else if (data.type === "phones") {
       phones = data.phones || [];
+      // Cleanup selfRoutedIds entries for disconnected phones
+      const connectedIds = new Set(phones.map((p) => p.id));
+      for (const id of Array.from(selfRoutedIds)) {
+        if (!connectedIds.has(id)) selfRoutedIds.delete(id);
+      }
+      // Auto-route new phones to themselves so they see own video
+      phones.forEach((phone) => {
+        if (!selfRoutedIds.has(phone.id) && !phone.receivingFrom) {
+          handleRouteSelection(phone.id, phone.id);
+          selfRoutedIds.add(phone.id);
+        }
+      });
       phones.forEach((phone) => {
         if (phone.preview) {
           previewCache.set(phone.id, phone.preview);
