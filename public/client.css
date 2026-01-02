@@ -48,6 +48,19 @@ video {
   left: 48%;
 }
 
+/* Panorama mode: single full-width remote video */
+body.panorama .remote.right {
+  display: none;
+}
+body.panorama .remote.left {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+}
+body.panorama .local.right {
+  display: none;
+}
+
 #control-overlay {
   z-index: 99;
   position: fixed;

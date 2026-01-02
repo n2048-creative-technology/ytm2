@@ -19,6 +19,7 @@ const pendingNameEdits = new Map(); // id -> pending string value
 const editingNameCursors = new Map(); // id -> { start, end }
 let focusedEditId = null; // last-focused editing name input id
 const selfRoutedIds = new Set(); // ids that were auto self-routed by this admin session
+const globalVrMode = document.getElementById("globalVrMode");
 
 function updateStatus(text) {
   statusEl.textContent = `Status: ${text}`;
@@ -181,6 +182,17 @@ function renderPhones() {
     overlayTd.appendChild(overlayCheckbox);
     tr.appendChild(overlayTd);
 
+    const vrTd = document.createElement("td");
+    const vrCheckbox = document.createElement("input");
+    vrCheckbox.type = "checkbox";
+    vrCheckbox.checked = phone.vrMode !== false; // default true
+    vrCheckbox.title = "Toggle VR (split) mode";
+    vrCheckbox.addEventListener("change", () => {
+      sendClientControl(phone.id, "set-vr-mode", { vr: vrCheckbox.checked });
+    });
+    vrTd.appendChild(vrCheckbox);
+    tr.appendChild(vrTd);
+
     phonesTableBody.appendChild(tr);
   });
 
@@ -223,6 +235,13 @@ function renderPhones() {
     globalOverlay.indeterminate = any && !all;
     globalOverlay.checked = all;
     globalOverlay.disabled = phones.length === 0;
+  }
+  if (globalVrMode) {
+    const any = phones.some((p) => p.vrMode !== false);
+    const all = phones.length > 0 && phones.every((p) => p.vrMode !== false);
+    globalVrMode.indeterminate = any && !all;
+    globalVrMode.checked = all;
+    globalVrMode.disabled = phones.length === 0;
   }
   if (btnRandomizeSenders) {
     btnRandomizeSenders.disabled = phones.length < 2;
@@ -413,6 +432,12 @@ if (globalLocalView) {
 if (globalOverlay) {
   globalOverlay.addEventListener("change", () => {
     sendClientControlAll("set-overlay", { visible: globalOverlay.checked });
+  });
+}
+
+if (globalVrMode) {
+  globalVrMode.addEventListener("change", () => {
+    sendClientControlAll("set-vr-mode", { vr: globalVrMode.checked });
   });
 }
 

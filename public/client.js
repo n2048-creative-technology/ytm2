@@ -31,6 +31,8 @@ const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
 const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
 let localViewVisible = false;
 let cameraRequested = false;
+let vrMode = true;
+const vrModeCheckbox = document.getElementById("vrModeCheckbox");
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -144,6 +146,15 @@ function setLocalViewVisibility(visible) {
     if (!video) return;
     video.style.display = localViewVisible ? "" : "none";
   });
+  if (changed) sendStateUpdate();
+}
+
+function setVrMode(isVr) {
+  const next = !!isVr;
+  const changed = next !== vrMode;
+  vrMode = next;
+  document.body.classList.toggle("panorama", !vrMode);
+  if (vrModeCheckbox) vrModeCheckbox.checked = vrMode;
   if (changed) sendStateUpdate();
 }
 
@@ -431,6 +442,11 @@ function connectWebSocket() {
               setOverlayVisibility(!!data.visible);
             }
             break;
+          case "set-vr-mode":
+            if (typeof data.vr === "boolean") {
+              setVrMode(!!data.vr);
+            }
+            break;
           case "reset-sender":
             if (data.peerId) {
               stopSendingToPeer(data.peerId);
@@ -504,6 +520,7 @@ connectWebSocket();
 updateRoleDisplay();
 setOverlayVisibility(false);
 setLocalViewVisibility(false);
+setVrMode(true);
 
 function handlePointerToggle(event) {
   if (!event.isPrimary) return;
@@ -523,13 +540,20 @@ function handlePointerToggle(event) {
 
 window.addEventListener("pointerup", handlePointerToggle);
 
+if (vrModeCheckbox) {
+  vrModeCheckbox.addEventListener("change", () => {
+    setVrMode(!!vrModeCheckbox.checked);
+  });
+}
+
 function sendStateUpdate() {
   if (!clientId || !ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(
     JSON.stringify({
       type: "update-state",
       localViewVisible,
-      controlOverlayVisible: overlayVisible
+      controlOverlayVisible: overlayVisible,
+      vrMode
     })
   );
 }

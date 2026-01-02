@@ -69,7 +69,8 @@ function formatPhone(client) {
     receivingFrom: client.receivingFrom,
     preview: client.previewData || null,
     localViewVisible: client.localViewVisible !== false,
-    controlOverlayVisible: !!client.controlOverlayVisible
+    controlOverlayVisible: !!client.controlOverlayVisible,
+    vrMode: client.vrMode !== false
   };
 }
 
@@ -204,7 +205,8 @@ wss.on("connection", (ws) => {
         receivingFrom: null,
         previewData: null,
         localViewVisible: false,
-        controlOverlayVisible: false
+        controlOverlayVisible: false,
+        vrMode: true
       });
       ws.send(JSON.stringify({ type: "registered", id }));
       console.log(`Registered ${role} ${id}`);
@@ -310,6 +312,9 @@ wss.on("connection", (ws) => {
         }
         if (typeof message.controlOverlayVisible === "boolean") {
           client.controlOverlayVisible = message.controlOverlayVisible;
+        }
+        if (typeof message.vrMode === "boolean") {
+          client.vrMode = message.vrMode;
         }
         broadcastPhoneList();
         break;
