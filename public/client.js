@@ -35,6 +35,20 @@ let vrMode = true;
 const vrModeCheckbox = document.getElementById("vrModeCheckbox");
 const localViewCheckbox = document.getElementById("localViewCheckbox");
 let knownPhones = [];
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if (!('wakeLock' in navigator)) return;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      // Wake Lock released
+      wakeLock = null;
+    });
+  } catch (e) {
+    console.warn('Wake Lock error', e && e.name, e && e.message);
+  }
+}
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -592,6 +606,8 @@ setVrMode(true);
 
 function handlePointerToggle(event) {
   if (!event.isPrimary) return;
+  // Try to keep the screen awake after first user interaction
+  if (!wakeLock) requestWakeLock();
   if (!cameraRequested) {
     cameraRequested = true;
     // Request camera in response to user gesture
@@ -605,6 +621,19 @@ function handlePointerToggle(event) {
 }
 
 window.addEventListener("pointerup", handlePointerToggle);
+
+// Re-acquire wake lock when returning to the page
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !wakeLock) {
+    requestWakeLock();
+  }
+});
+
+// Release wake lock on unload-like events
+window.addEventListener('pagehide', () => {
+  try { wakeLock && wakeLock.release && wakeLock.release(); } catch {}
+  wakeLock = null;
+});
 
 if (vrModeCheckbox) {
   vrModeCheckbox.addEventListener("change", () => {
