@@ -30,6 +30,7 @@ let overlayVisible = false;
 const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
 const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
 let localViewVisible = false;
+let cameraRequested = false;
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -148,24 +149,28 @@ function setLocalViewVisibility(visible) {
 
 async function getCameraStream() {
   if (cameraStream) return cameraStream;
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        frameRate: { ideal: 20 }
-      },
-      audio: false
-    });
-    setVideoStream(localVideos, cameraStream);
-    setupPreviewPipeline();
-  } catch (err) {
-    console.error("Camera error", err);
-    setError("Camera access failed.");
-    throw err;
+  const attempts = [
+    { video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, audio: false },
+    { video: { facingMode: { ideal: "environment" } }, audio: false },
+    { video: true, audio: false },
+    { video: { facingMode: "user" }, audio: false }
+  ];
+  let lastErr = null;
+  for (const constraints of attempts) {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setVideoStream(localVideos, cameraStream);
+      setupPreviewPipeline();
+      setError("");
+      return cameraStream;
+    } catch (err) {
+      lastErr = err;
+      console.warn("getUserMedia failed", err && err.name, err && err.message);
+    }
   }
-  return cameraStream;
+  const detail = lastErr && lastErr.name ? ` (${lastErr.name})` : "";
+  setError(`Camera access failed${detail}. Tap the screen and try again.`);
+  throw lastErr || new Error("getUserMedia failed");
 }
 
 function setupPreviewPipeline() {
@@ -499,12 +504,14 @@ connectWebSocket();
 updateRoleDisplay();
 setOverlayVisibility(false);
 setLocalViewVisibility(false);
-getCameraStream().catch(() => {
-  // Permission denied handled in getCameraStream via setError
-});
 
 function handlePointerToggle(event) {
   if (!event.isPrimary) return;
+  if (!cameraRequested) {
+    cameraRequested = true;
+    // Request camera in response to user gesture
+    getCameraStream().catch(() => {});
+  }
   if (controlOverlay && controlOverlay.contains(event.target) && overlayVisible) {
     const interactive = event.target.closest("input, button, textarea");
     if (interactive) {
