@@ -48,8 +48,7 @@ video {
   left: 48%;
 }
 
-#left-text-overlay.text-overlay,
-#right-text-overlay.text-overlay {
+.text-overlay {
   position: absolute;
   z-index: 50;
   color: #fff;
