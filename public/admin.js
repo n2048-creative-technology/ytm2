@@ -3,6 +3,8 @@ const phonesTableBody = document.querySelector("#phonesTable tbody");
 const adminError = document.getElementById("adminError");
 const qrCanvas = document.getElementById("qrCanvas");
 const qrUrlEl = document.getElementById("qrUrl");
+const globalLocalView = document.getElementById("globalLocalView");
+const globalOverlay = document.getElementById("globalOverlay");
 
 let ws;
 let phones = [];
@@ -202,6 +204,22 @@ function renderPhones() {
       } catch {}
     }
   }
+
+  // Update global toggles to reflect aggregate state
+  if (globalLocalView) {
+    const any = phones.some((p) => !!p.localViewVisible);
+    const all = phones.length > 0 && phones.every((p) => !!p.localViewVisible);
+    globalLocalView.indeterminate = any && !all;
+    globalLocalView.checked = all;
+    globalLocalView.disabled = phones.length === 0;
+  }
+  if (globalOverlay) {
+    const any = phones.some((p) => !!p.controlOverlayVisible);
+    const all = phones.length > 0 && phones.every((p) => !!p.controlOverlayVisible);
+    globalOverlay.indeterminate = any && !all;
+    globalOverlay.checked = all;
+    globalOverlay.disabled = phones.length === 0;
+  }
 }
 
 function handleRouteSelection(receiverId, senderId) {
@@ -335,4 +353,33 @@ function sendClientControl(targetId, action, params = {}) {
       params
     })
   );
+}
+
+function sendClientControlAll(action, params = {}) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    setAdminError("WebSocket not connected");
+    return;
+  }
+  phones.forEach((p) => {
+    ws.send(
+      JSON.stringify({
+        type: "client-control",
+        target: p.id,
+        action,
+        params
+      })
+    );
+  });
+}
+
+if (globalLocalView) {
+  globalLocalView.addEventListener("change", () => {
+    sendClientControlAll("set-local-view", { visible: globalLocalView.checked });
+  });
+}
+
+if (globalOverlay) {
+  globalOverlay.addEventListener("change", () => {
+    sendClientControlAll("set-overlay", { visible: globalOverlay.checked });
+  });
 }
