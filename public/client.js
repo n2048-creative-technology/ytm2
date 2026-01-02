@@ -124,11 +124,14 @@ function toggleOverlayVisibility() {
 }
 
 function setLocalViewVisibility(visible) {
-  localViewVisible = !!visible;
+  const next = !!visible;
+  const changed = next !== localViewVisible;
+  localViewVisible = next;
   localVideos.forEach((video) => {
     if (!video) return;
     video.style.display = localViewVisible ? "" : "none";
   });
+  if (changed) sendStateUpdate();
 }
 
 async function getCameraStream() {
@@ -345,6 +348,7 @@ function startNameHeartbeat() {
   nameHeartbeatInterval = setInterval(() => {
     if (!isRegistered || !ws || ws.readyState !== WebSocket.OPEN) return;
     sendNameUpdate();
+    sendStateUpdate();
   }, 5000);
 }
 
@@ -489,3 +493,13 @@ function handlePointerToggle(event) {
 }
 
 window.addEventListener("pointerup", handlePointerToggle);
+
+function sendStateUpdate() {
+  if (!clientId || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(
+    JSON.stringify({
+      type: "update-state",
+      localViewVisible
+    })
+  );
+}

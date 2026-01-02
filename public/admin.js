@@ -147,19 +147,14 @@ function renderPhones() {
     tr.appendChild(controlTd);
 
     const localViewTd = document.createElement("td");
-    const showBtn = document.createElement("button");
-    showBtn.textContent = "Show";
-    showBtn.addEventListener("click", () => {
-      sendClientControl(phone.id, "set-local-view", { visible: true });
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = !!phone.localViewVisible;
+    checkbox.title = "Toggle local view visibility";
+    checkbox.addEventListener("change", () => {
+      sendClientControl(phone.id, "set-local-view", { visible: checkbox.checked });
     });
-    const hideBtn = document.createElement("button");
-    hideBtn.textContent = "Hide";
-    hideBtn.style.marginLeft = "6px";
-    hideBtn.addEventListener("click", () => {
-      sendClientControl(phone.id, "set-local-view", { visible: false });
-    });
-    localViewTd.appendChild(showBtn);
-    localViewTd.appendChild(hideBtn);
+    localViewTd.appendChild(checkbox);
     tr.appendChild(localViewTd);
 
     phonesTableBody.appendChild(tr);

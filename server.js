@@ -66,7 +66,8 @@ function formatPhone(client) {
     status,
     sendingTo: sendingTargets,
     receivingFrom: client.receivingFrom,
-    preview: client.previewData || null
+    preview: client.previewData || null,
+    localViewVisible: client.localViewVisible !== false
   };
 }
 
@@ -168,7 +169,8 @@ wss.on("connection", (ws) => {
         name: message.name || (role === "admin" ? "Admin" : "Phone"),
         sendingTo: new Set(),
         receivingFrom: null,
-        previewData: null
+        previewData: null,
+        localViewVisible: true
       });
       ws.send(JSON.stringify({ type: "registered", id }));
       console.log(`Registered ${role} ${id}`);
@@ -265,6 +267,14 @@ wss.on("connection", (ws) => {
             ...params
           })
         );
+        break;
+      }
+      case "update-state": {
+        if (client.role !== "phone") return;
+        if (typeof message.localViewVisible === "boolean") {
+          client.localViewVisible = message.localViewVisible;
+          broadcastPhoneList();
+        }
         break;
       }
       case "update-name": {
