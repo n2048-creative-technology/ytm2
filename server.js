@@ -38,6 +38,7 @@ if (httpsKeyPath && httpsCertPath) {
 }
 
 const wss = new WebSocketServer({ server, path: "/ws" });
+const HEARTBEAT_INTERVAL_MS = Number(process.env.HEARTBEAT_INTERVAL_MS || 5000);
 const clients = new Map();
 let clientCounter = 1;
 
@@ -161,6 +162,12 @@ function applyRouteByIds(fromId, toId) {
 wss.on("connection", (ws) => {
   console.log("WebSocket connected");
   let assignedId = null;
+
+  // Heartbeat: track liveness via ping/pong
+  ws.isAlive = true;
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
 
   ws.on("message", (raw) => {
     let message;
@@ -361,6 +368,22 @@ wss.on("connection", (ws) => {
     }
     console.log(`Client disconnected ${assignedId}`);
   });
+});
+
+// Periodically ping all clients; terminate if no pong received
+const heartbeat = setInterval(() => {
+  wss.clients.forEach((socket) => {
+    if (socket.isAlive === false) {
+      try { socket.terminate(); } catch {}
+      return;
+    }
+    socket.isAlive = false;
+    try { socket.ping(); } catch {}
+  });
+}, HEARTBEAT_INTERVAL_MS);
+
+wss.on("close", () => {
+  clearInterval(heartbeat);
 });
 
 const defaultPort = protocol === "https" ? 8443 : 3000;
