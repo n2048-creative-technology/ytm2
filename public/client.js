@@ -5,6 +5,7 @@ const roleStateEl = document.getElementById("roleState");
 const peerInfoEl = document.getElementById("peerInfo");
 const errorDisplay = document.getElementById("errorDisplay");
 const controlOverlay = document.getElementById("control-overlay");
+const receiverSelect = document.getElementById("receiverSelect");
 const remoteVideoLeft = document.getElementById("left-eye-remote-video");
 const remoteVideoRight = document.getElementById("right-eye-remote-video");
 const localVideoLeft = document.getElementById("left-eye-local-video");
@@ -33,6 +34,7 @@ let localViewVisible = false;
 let cameraRequested = false;
 let vrMode = true;
 const vrModeCheckbox = document.getElementById("vrModeCheckbox");
+let knownPhones = [];
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -281,6 +283,10 @@ function prepareReceiver(peerId) {
   receiverPeerId = peerId;
   ensureReceiverPc();
   updateRoleDisplay();
+  // Reflect selection in UI
+  if (receiverSelect) {
+    receiverSelect.value = peerId || "";
+  }
 }
 
 async function handleReceiverOffer(fromId, offer) {
@@ -421,6 +427,41 @@ function connectWebSocket() {
         sendStateUpdate();
         startNameHeartbeat();
         break;
+      case "phones": {
+        // Update dropdown with connected phones
+        knownPhones = Array.isArray(data.phones) ? data.phones : [];
+        if (receiverSelect) {
+          const prev = receiverSelect.value;
+          receiverSelect.innerHTML = "";
+          const noneOpt = document.createElement("option");
+          noneOpt.value = "";
+          noneOpt.textContent = "None";
+          receiverSelect.appendChild(noneOpt);
+          // Self first
+          const selfPhone = knownPhones.find((p) => p.id === clientId);
+          if (selfPhone) {
+            const selfOpt = document.createElement("option");
+            selfOpt.value = selfPhone.id;
+            selfOpt.textContent = `${selfPhone.name} (You)`;
+            receiverSelect.appendChild(selfOpt);
+          }
+          // Others
+          knownPhones
+            .filter((p) => p.id !== clientId)
+            .forEach((p) => {
+              const opt = document.createElement("option");
+              opt.value = p.id;
+              opt.textContent = `${p.name} (${p.id})`;
+              receiverSelect.appendChild(opt);
+            });
+          // Set selection based on current receiver or previous value
+          const target = receiverPeerId || prev;
+          if (typeof target === "string") {
+            receiverSelect.value = target;
+          }
+        }
+        break;
+      }
       case "control":
         setError("");
         switch (data.action) {
@@ -543,6 +584,17 @@ window.addEventListener("pointerup", handlePointerToggle);
 if (vrModeCheckbox) {
   vrModeCheckbox.addEventListener("change", () => {
     setVrMode(!!vrModeCheckbox.checked);
+  });
+}
+
+if (receiverSelect) {
+  receiverSelect.addEventListener("change", () => {
+    // Request routing for this client (self) to selected sender
+    const value = receiverSelect.value;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !clientId) return;
+    ws.send(
+      JSON.stringify({ type: "route", from: value || null, to: clientId })
+    );
   });
 }
 

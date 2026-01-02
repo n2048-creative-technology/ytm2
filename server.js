@@ -81,7 +81,12 @@ function broadcastPhoneList() {
       phones.push(formatPhone(client));
     }
   }
-  broadcastToAdmins({ type: "phones", phones });
+  const payload = JSON.stringify({ type: "phones", phones });
+  for (const client of clients.values()) {
+    if (client.role === "admin" || client.role === "phone") {
+      client.ws.send(payload);
+    }
+  }
 }
 
 function broadcastPreviewUpdate(id, image) {
@@ -231,10 +236,14 @@ wss.on("connection", (ws) => {
 
     switch (message.type) {
       case "route": {
-        if (client.role !== "admin") return;
         const toClient = clients.get(message.to);
         if (!toClient || toClient.role !== "phone") {
           ws.send(JSON.stringify({ type: "error", message: "Invalid receiver" }));
+          return;
+        }
+        // Admin can route any; phone can only request for itself (to === own id)
+        if (client.role !== "admin" && !(client.role === "phone" && toClient.id === client.id)) {
+          ws.send(JSON.stringify({ type: "error", message: "Not authorized" }));
           return;
         }
 
