@@ -72,6 +72,15 @@ function getStoredDeviceId() {
   return localStorage.getItem(DEVICE_ID_KEY) || null;
 }
 
+function generateRandomId(len = 6) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
 function getCurrentName() {
   const value = deviceNameInput.value.trim();
   return value.length > 0 ? value : `Phone ${clientId || ""}`;
@@ -323,8 +332,12 @@ function registerPhone() {
     role: "phone",
     name: getCurrentName()
   };
-  const savedId = getStoredDeviceId();
-  if (savedId) payload.id = savedId;
+  let savedId = getStoredDeviceId();
+  if (!savedId || !/^[A-Za-z0-9]{6}$/.test(savedId)) {
+    savedId = generateRandomId(6);
+    localStorage.setItem(DEVICE_ID_KEY, savedId);
+  }
+  payload.id = savedId;
   ws.send(JSON.stringify(payload));
 }
 
