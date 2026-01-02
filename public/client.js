@@ -1,0 +1,452 @@
+const connectionStatusEl = document.getElementById("connection-status");
+const deviceNameInput = document.getElementById("deviceName");
+const clientIdDisplay = document.getElementById("clientIdDisplay");
+const roleStateEl = document.getElementById("roleState");
+const peerInfoEl = document.getElementById("peerInfo");
+const errorDisplay = document.getElementById("errorDisplay");
+const controlOverlay = document.getElementById("control-overlay");
+const remoteVideoLeft = document.getElementById("left-eye-remote-video");
+const remoteVideoRight = document.getElementById("right-eye-remote-video");
+const localVideoLeft = document.getElementById("left-eye-local-video");
+const localVideoRight = document.getElementById("right-eye-local-video");
+
+const DEVICE_ID_KEY = "local-vr-router-device-id";
+const DEVICE_NAME_KEY = "local-vr-router-device-name";
+const PREVIEW_INTERVAL_MS = 100;
+
+let ws;
+let clientId = null;
+const senderConnections = new Map(); // peerId -> RTCPeerConnection
+let receiverPeerId = null;
+let receiverPc = null;
+let cameraStream = null;
+let previewVideo = null;
+let previewCanvas = null;
+let previewTimer = null;
+let nameUpdateTimeout = null;
+let isRegistered = false;
+let overlayVisible = true;
+const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
+const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
+
+function setVideoStream(videos, stream) {
+  videos.forEach((video) => {
+    if (!video) return;
+    video.srcObject = stream || null;
+    if (stream) {
+      video.play().catch(() => {});
+    }
+  });
+}
+
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    try {
+      await navigator.serviceWorker.register("/service-worker.js");
+      console.log("Service worker registered");
+    } catch (err) {
+      console.warn("SW registration failed", err);
+    }
+  }
+}
+
+function updateStatus(text) {
+  connectionStatusEl.textContent = `Status: ${text}`;
+}
+
+function setError(message) {
+  errorDisplay.textContent = message || "";
+}
+
+function updateRoleDisplay() {
+  const sendingPeers = Array.from(senderConnections.keys());
+  roleStateEl.textContent = sendingPeers.length
+    ? `Sending to ${sendingPeers.join(", ")}`
+    : "Not sending";
+  peerInfoEl.textContent = receiverPeerId ? `Receiving from ${receiverPeerId}` : "Not receiving";
+}
+
+function getStoredDeviceId() {
+  return localStorage.getItem(DEVICE_ID_KEY) || null;
+}
+
+function getCurrentName() {
+  const value = deviceNameInput.value.trim();
+  return value.length > 0 ? value : `Phone ${clientId || ""}`;
+}
+
+function stopSendingToPeer(peerId) {
+  const pc = senderConnections.get(peerId);
+  if (pc) {
+    pc.onicecandidate = null;
+    pc.onconnectionstatechange = null;
+    pc.close();
+    senderConnections.delete(peerId);
+  }
+  updateRoleDisplay();
+}
+
+function resetSender() {
+  for (const peerId of Array.from(senderConnections.keys())) {
+    stopSendingToPeer(peerId);
+  }
+}
+
+function resetReceiver() {
+  if (receiverPc) {
+    receiverPc.onicecandidate = null;
+    receiverPc.ontrack = null;
+    receiverPc.onconnectionstatechange = null;
+    receiverPc.close();
+    receiverPc = null;
+  }
+  receiverPeerId = null;
+  setVideoStream(remoteVideos, null);
+  updateRoleDisplay();
+}
+
+function resetAllConnections() {
+  resetSender();
+  resetReceiver();
+}
+
+function setOverlayVisibility(visible) {
+  overlayVisible = visible;
+  if (controlOverlay) {
+    controlOverlay.classList.toggle("hidden", !overlayVisible);
+  }
+}
+
+function toggleOverlayVisibility() {
+  setOverlayVisibility(!overlayVisible);
+}
+
+async function getCameraStream() {
+  if (cameraStream) return cameraStream;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 20 }
+      },
+      audio: false
+    });
+    setVideoStream(localVideos, cameraStream);
+    setupPreviewPipeline();
+  } catch (err) {
+    console.error("Camera error", err);
+    setError("Camera access failed.");
+    throw err;
+  }
+  return cameraStream;
+}
+
+function setupPreviewPipeline() {
+  if (!cameraStream || previewVideo) return;
+  previewVideo = document.createElement("video");
+  previewVideo.muted = true;
+  previewVideo.playsInline = true;
+  previewVideo.srcObject = cameraStream;
+  previewVideo.addEventListener("loadedmetadata", () => {
+    previewVideo.play().catch((err) => console.warn("Preview play blocked", err));
+  });
+  previewCanvas = document.createElement("canvas");
+  previewCanvas.width = 320;
+  previewCanvas.height = 180;
+  previewTimer = setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !isRegistered) return;
+    if (!previewCanvas || !previewVideo || previewVideo.readyState < 2) return;
+    const ctx = previewCanvas.getContext("2d");
+    ctx.drawImage(previewVideo, 0, 0, previewCanvas.width, previewCanvas.height);
+    const image = previewCanvas.toDataURL("image/jpeg", 0.5);
+    ws.send(
+      JSON.stringify({
+        type: "preview",
+        image
+      })
+    );
+  }, PREVIEW_INTERVAL_MS);
+}
+
+function createSenderConnection(peerId) {
+  const pc = new RTCPeerConnection({ iceServers: [] });
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      sendSignal(peerId, "ice-candidate", event.candidate, "receiver");
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+      stopSendingToPeer(peerId);
+    }
+  };
+  return pc;
+}
+
+async function startSending(peerId) {
+  if (!peerId) return;
+  if (senderConnections.has(peerId)) {
+    stopSendingToPeer(peerId);
+  }
+  const pc = createSenderConnection(peerId);
+  senderConnections.set(peerId, pc);
+  updateRoleDisplay();
+  try {
+    const stream = await getCameraStream();
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendSignal(peerId, "offer", offer, "receiver");
+    setError("");
+  } catch (err) {
+    console.error("Failed to start sender", err);
+    stopSendingToPeer(peerId);
+  }
+}
+
+function ensureReceiverPc() {
+  if (receiverPc) return receiverPc;
+  receiverPc = new RTCPeerConnection({ iceServers: [] });
+  receiverPc.onicecandidate = (event) => {
+    if (event.candidate && receiverPeerId) {
+      sendSignal(receiverPeerId, "ice-candidate", event.candidate, "sender");
+    }
+  };
+  receiverPc.ontrack = (event) => {
+    const [remoteStream] = event.streams;
+    setVideoStream(remoteVideos, remoteStream);
+  };
+  receiverPc.onconnectionstatechange = () => {
+    if (
+      receiverPc &&
+      (receiverPc.connectionState === "failed" || receiverPc.connectionState === "disconnected")
+    ) {
+      resetReceiver();
+    }
+  };
+  return receiverPc;
+}
+
+function prepareReceiver(peerId) {
+  if (!peerId) {
+    resetReceiver();
+    return;
+  }
+  if (receiverPeerId && receiverPeerId !== peerId) {
+    resetReceiver();
+  }
+  receiverPeerId = peerId;
+  ensureReceiverPc();
+  updateRoleDisplay();
+}
+
+async function handleReceiverOffer(fromId, offer) {
+  receiverPeerId = fromId;
+  const pc = ensureReceiverPc();
+  updateRoleDisplay();
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendSignal(fromId, "answer", answer, "sender");
+  } catch (err) {
+    console.error("Receiver failed to handle offer", err);
+    setError("Unable to handle offer.");
+    resetReceiver();
+  }
+}
+
+async function handleReceiverCandidate(fromId, candidate) {
+  if (!receiverPc || receiverPeerId !== fromId) {
+    receiverPeerId = fromId;
+    ensureReceiverPc();
+  }
+  try {
+    await receiverPc.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (err) {
+    console.error("Receiver ICE error", err);
+  }
+}
+
+async function handleSenderAnswer(fromId, answer) {
+  const pc = senderConnections.get(fromId);
+  if (!pc) return;
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  } catch (err) {
+    console.error("Sender failed to set answer", err);
+  }
+}
+
+async function handleSenderCandidate(fromId, candidate) {
+  const pc = senderConnections.get(fromId);
+  if (!pc) return;
+  try {
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (err) {
+    console.error("Sender ICE error", err);
+  }
+}
+
+function sendSignal(targetId, signalType, payload, targetRole) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(
+    JSON.stringify({
+      type: "signal",
+      target: targetId,
+      signalType,
+      payload,
+      targetRole
+    })
+  );
+}
+
+function registerPhone() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  const payload = {
+    type: "register",
+    role: "phone",
+    name: getCurrentName()
+  };
+  const savedId = getStoredDeviceId();
+  if (savedId) payload.id = savedId;
+  ws.send(JSON.stringify(payload));
+}
+
+function sendNameUpdate() {
+  if (!clientId || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(
+    JSON.stringify({
+      type: "update-name",
+      name: getCurrentName()
+    })
+  );
+}
+
+function scheduleNameUpdate() {
+  if (nameUpdateTimeout) clearTimeout(nameUpdateTimeout);
+  nameUpdateTimeout = setTimeout(sendNameUpdate, 400);
+}
+
+function connectWebSocket() {
+  const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+  ws = new WebSocket(protocol + location.host + "/ws");
+  updateStatus("Connecting...");
+
+  ws.addEventListener("open", () => {
+    updateStatus("Connected");
+    registerPhone();
+  });
+
+  ws.addEventListener("close", () => {
+    updateStatus("Disconnected");
+    isRegistered = false;
+    resetAllConnections();
+    setTimeout(connectWebSocket, 3000);
+  });
+
+  ws.addEventListener("message", async (event) => {
+    const data = JSON.parse(event.data);
+    switch (data.type) {
+      case "registered":
+        clientId = data.id;
+        isRegistered = true;
+        localStorage.setItem(DEVICE_ID_KEY, clientId);
+        clientIdDisplay.textContent = `Client ID: ${clientId}`;
+        sendNameUpdate();
+        break;
+      case "control":
+        setError("");
+        switch (data.action) {
+          case "be-sender":
+            await startSending(data.peerId);
+            break;
+          case "be-receiver":
+            prepareReceiver(data.peerId);
+            break;
+          case "reset-sender":
+            if (data.peerId) {
+              stopSendingToPeer(data.peerId);
+            } else {
+              resetSender();
+            }
+            break;
+          case "reset-receiver":
+            if (!data.peerId || data.peerId === receiverPeerId) {
+              resetReceiver();
+            }
+            break;
+          case "reset":
+            resetAllConnections();
+            break;
+          default:
+            console.warn("Unknown control action", data);
+        }
+        break;
+      case "signal": {
+        const role = data.targetRole;
+        if (role === "receiver") {
+          if (data.signalType === "offer") {
+            await handleReceiverOffer(data.from, data.payload);
+          } else if (data.signalType === "ice-candidate") {
+            await handleReceiverCandidate(data.from, data.payload);
+          }
+        } else if (role === "sender") {
+          if (data.signalType === "answer") {
+            await handleSenderAnswer(data.from, data.payload);
+          } else if (data.signalType === "ice-candidate") {
+            await handleSenderCandidate(data.from, data.payload);
+          }
+        } else {
+          console.warn("Unknown signal role", data);
+        }
+        break;
+      }
+      case "error":
+        setError(data.message || "Unknown error");
+        break;
+      default:
+        console.log("Unhandled message", data);
+    }
+  });
+
+  ws.addEventListener("error", (err) => {
+    console.error("WebSocket error", err);
+    setError("WebSocket error");
+  });
+}
+
+function initFromStorage() {
+  const storedName = localStorage.getItem(DEVICE_NAME_KEY);
+  if (storedName) {
+    deviceNameInput.value = storedName;
+  }
+}
+
+deviceNameInput.addEventListener("input", () => {
+  localStorage.setItem(DEVICE_NAME_KEY, deviceNameInput.value);
+  scheduleNameUpdate();
+});
+
+registerServiceWorker();
+initFromStorage();
+connectWebSocket();
+updateRoleDisplay();
+getCameraStream().catch(() => {
+  // Permission denied handled in getCameraStream via setError
+});
+
+function handlePointerToggle(event) {
+  if (!event.isPrimary) return;
+  if (controlOverlay && controlOverlay.contains(event.target) && overlayVisible) {
+    const interactive = event.target.closest("input, button, textarea");
+    if (interactive) {
+      return;
+    }
+  }
+  toggleOverlayVisibility();
+}
+
+window.addEventListener("pointerup", handlePointerToggle);

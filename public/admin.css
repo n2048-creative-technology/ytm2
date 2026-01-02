@@ -1,0 +1,93 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f1724;
+  color: #f7fbff;
+}
+
+header {
+  padding: 1rem;
+  text-align: center;
+  background: #18263b;
+}
+
+main {
+  padding: 1rem;
+  margin: 0 auto;
+}
+
+section {
+  background: #18263b;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: visible;
+  padding-bottom: 0.25rem;
+}
+
+#qr-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  background: rgba(15, 23, 36, 0.8);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+#qr-wrapper canvas {
+  background: #fff;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+#qr-wrapper p {
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #2a3c59;
+  text-align: left;
+}
+
+.phone-preview {
+  width: 80px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #2a3c59;
+  background: #000;
+}
+
+tr.sending {
+  background: rgba(255, 165, 0, 0.15);
+}
+
+tr.receiving {
+  background: rgba(64, 173, 255, 0.15);
+}
+
+table select {
+  width: 100%;
+  padding: 0.35rem;
+  border-radius: 6px;
+  border: none;
+  background: #0f1724;
+  color: #f7fbff;
+}
+
+.error {
+  color: #ff9f9f;
+}

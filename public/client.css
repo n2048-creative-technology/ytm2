@@ -1,0 +1,94 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 50px;
+  padding: 0;
+  background-color: #000;
+  color: #fff;
+  font-family: Monospace;
+  font-size: 13px;
+  line-height: 24px;
+  overscroll-behavior: none;
+}
+
+video {
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+  position: absolute;
+  background: #000;
+}
+
+.local {
+  width: 10%;
+  top: 165px;
+}
+
+.remote {
+  top: 0;
+  width: 39%;
+}
+
+.local.left {
+  right: calc(52% + 10px);
+}
+
+.local.right {
+  right: calc(52% - 39% + 10px);
+}
+
+.remote.left {
+  right: 52%;
+}
+
+.remote.right {
+  left: 48%;
+}
+
+#control-overlay {
+  z-index: 99;
+  position: fixed;
+  background: #000000bd;
+  font-size: 1em;
+  font-weight: 700;
+  top: 15%;
+  right: calc(50% + 10px);
+  color: #fff;
+  padding: 10px;
+  transition: opacity 0.2s ease;
+  width: 280px;
+}
+
+#control-overlay label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+#control-overlay input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  background: #000;
+  color: #fff;
+  margin-bottom: 6px;
+  font-family: inherit;
+  font-size: 0.95em;
+}
+
+#control-overlay p {
+  margin: 2px 0;
+  font-size: 0.85em;
+}
+
+#errorDisplay {
+  color: #ff9f9f;
+}
+
+#control-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}

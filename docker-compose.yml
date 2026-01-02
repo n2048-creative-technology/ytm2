@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8443:8443"
+    environment:
+      PORT: "8443"
+      HTTPS_KEY_PATH: "/etc/letsencrypt/live/ytm2.n2048.com/privkey.pem"
+      HTTPS_CERT_PATH: "/etc/letsencrypt/live/ytm2.n2048.com/fullchain.pem"
+    volumes:
+      - "/etc/letsencrypt:/etc/letsencrypt:ro"

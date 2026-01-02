@@ -1,0 +1,52 @@
+{
+  "name": "YTM-2",
+  "start_url": "https://ytm2.n2048.com",
+  "display": "fullscreen",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "short_name": "YTM-2",
+  "id": "ytm-2",
+  "description": "PeerJS video connection for VR",
+  "lang": "en",
+  "orientation": "landscape",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui",
+    "browser",
+    "window-controls-overlay"
+  ],
+"protocol_handlers": [
+  {
+    "protocol": "web+ytm",
+    "url": "/handle-protocol?url=%s"
+  }
+],
+"screenshots": [
+  {
+    "src": "/screenshots/desktop-1.png",
+    "sizes": "1280x720",
+    "type": "image/png",
+    "form_factor": "wide"
+  },
+  {
+    "src": "/screenshots/mobile-1.png",
+    "sizes": "750x1334",
+    "type": "image/png"
+  }
+],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

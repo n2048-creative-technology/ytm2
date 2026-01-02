@@ -1,0 +1,14 @@
+{
+  "name": "local-vr-router",
+  "version": "1.0.0",
+  "description": "Local WebRTC router for phone-to-phone VR video.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "ws": "^8.16.0"
+  }
+}
