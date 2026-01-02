@@ -199,9 +199,17 @@ function showOverlayText(text, durationMs = 3000) {
   // Update text content on both overlays
   if (leftTextOverlay) leftTextOverlay.textContent = text || "";
   if (rightTextOverlay) rightTextOverlay.textContent = text || "";
+  // Reset visibility to ensure opacity animates back to 100%
+  if (leftTextOverlay) leftTextOverlay.classList.remove("visible");
+  if (rightTextOverlay) rightTextOverlay.classList.remove("visible");
+  // Force reflow to restart the transition reliably
+  try { if (leftTextOverlay) void leftTextOverlay.offsetWidth; } catch {}
+  try { if (rightTextOverlay) void rightTextOverlay.offsetWidth; } catch {}
   // Show
-  if (leftTextOverlay) leftTextOverlay.classList.toggle("visible", !!text);
-  if (rightTextOverlay) rightTextOverlay.classList.toggle("visible", !!text && vrMode);
+  if (text) {
+    if (leftTextOverlay) leftTextOverlay.classList.add("visible");
+    if (rightTextOverlay && vrMode) rightTextOverlay.classList.add("visible");
+  }
   // In panorama, right overlay is hidden by CSS; left expands to full width
   if (text) {
     overlayTextTimer = setTimeout(() => {

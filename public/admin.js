@@ -12,6 +12,7 @@ const btnBroadcastRandom = document.getElementById("btnBroadcastRandom");
 const overlayTextInput = document.getElementById("overlayTextInput");
 const overlayTextTarget = document.getElementById("overlayTextTarget");
 const btnSendOverlayText = document.getElementById("btnSendOverlayText");
+const btnClearOverlayText = document.getElementById("btnClearOverlayText");
 
 let ws;
 let phones = [];
@@ -548,6 +549,19 @@ if (overlayTextInput) {
       sendOverlayText();
     }
   });
+}
+
+function clearOverlayText() {
+  const payload = { text: "", duration: 0 };
+  if (!overlayTextTarget || overlayTextTarget.value === "*") {
+    sendClientControlAll("overlay-text", payload);
+  } else {
+    sendClientControl(overlayTextTarget.value, "overlay-text", payload);
+  }
+}
+
+if (btnClearOverlayText) {
+  btnClearOverlayText.addEventListener("click", clearOverlayText);
 }
 
 if (btnBroadcastRandom) {
