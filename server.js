@@ -138,6 +138,26 @@ function resetPeersReferencing(id) {
   }
 }
 
+function applyRouteByIds(fromId, toId) {
+  const fromClient = clients.get(fromId);
+  const toClient = clients.get(toId);
+  if (!fromClient || !toClient) return;
+  if (fromClient.role !== "phone" || toClient.role !== "phone") return;
+  if (toClient.receivingFrom === fromClient.id) return;
+  clearReceiving(toClient);
+  if (!fromClient.sendingTo) {
+    fromClient.sendingTo = new Set();
+  }
+  fromClient.sendingTo.add(toClient.id);
+  toClient.receivingFrom = fromClient.id;
+  fromClient.ws.send(
+    JSON.stringify({ type: "control", action: "be-sender", peerId: toClient.id })
+  );
+  toClient.ws.send(
+    JSON.stringify({ type: "control", action: "be-receiver", peerId: fromClient.id })
+  );
+}
+
 wss.on("connection", (ws) => {
   console.log("WebSocket connected");
   let assignedId = null;
@@ -313,10 +333,30 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     if (!assignedId) return;
     const client = clients.get(assignedId);
+    // Capture receivers that were receiving from this client before cleanup
+    const affectedReceivers = [];
+    if (client && client.role === "phone") {
+      for (const c of clients.values()) {
+        if (c.role === "phone" && c.receivingFrom === assignedId) {
+          affectedReceivers.push(c.id);
+        }
+      }
+    }
     clients.delete(assignedId);
     if (client && client.role === "phone") {
       broadcastPreviewUpdate(assignedId, null);
       resetPeersReferencing(assignedId);
+      // Reassign affected receivers to a random available sender (or self if none)
+      const remainingPhoneIds = Array.from(clients.values())
+        .filter((c) => c.role === "phone")
+        .map((c) => c.id);
+      for (const rid of affectedReceivers) {
+        const candidates = remainingPhoneIds.filter((id) => id !== rid);
+        const newSenderId = candidates.length > 0
+          ? candidates[Math.floor(Math.random() * candidates.length)]
+          : rid;
+        applyRouteByIds(newSenderId, rid);
+      }
       broadcastPhoneList();
     }
     console.log(`Client disconnected ${assignedId}`);
