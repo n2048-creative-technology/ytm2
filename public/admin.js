@@ -10,6 +10,8 @@ const previewCache = new Map();
 const previewElements = new Map();
 const editingNameIds = new Set(); // ids currently being edited
 const pendingNameEdits = new Map(); // id -> pending string value
+const editingNameCursors = new Map(); // id -> { start, end }
+let focusedEditId = null; // last-focused editing name input id
 
 function updateStatus(text) {
   statusEl.textContent = `Status: ${text}`;
@@ -56,8 +58,19 @@ function renderPhones() {
       input.type = "text";
       input.value = current;
       input.size = 14;
+      input.id = `name-input-${phone.id}`;
+      input.dataset.role = "name-edit";
+      input.addEventListener("focus", () => {
+        focusedEditId = phone.id;
+      });
       input.addEventListener("input", () => {
         pendingNameEdits.set(phone.id, input.value);
+        try {
+          editingNameCursors.set(phone.id, {
+            start: input.selectionStart ?? input.value.length,
+            end: input.selectionEnd ?? input.value.length
+          });
+        } catch {}
       });
       const okBtn = document.createElement("button");
       okBtn.textContent = "OK";
@@ -73,6 +86,8 @@ function renderPhones() {
         // exit edit mode
         editingNameIds.delete(phone.id);
         pendingNameEdits.delete(phone.id);
+        editingNameCursors.delete(phone.id);
+        if (focusedEditId === phone.id) focusedEditId = null;
         renderPhones();
       });
       nameTd.appendChild(input);
@@ -153,6 +168,25 @@ function renderPhones() {
   for (const key of Array.from(previewCache.keys())) {
     if (!seenIds.has(key)) {
       previewCache.delete(key);
+    }
+  }
+
+  // Restore focus and caret for editing inputs after rendering
+  if (editingNameIds.size > 0) {
+    const ids = Array.from(editingNameIds);
+    const idToFocus = focusedEditId && editingNameIds.has(focusedEditId) ? focusedEditId : ids[0];
+    const input = document.getElementById(`name-input-${idToFocus}`);
+    if (input) {
+      input.focus();
+      const cur = editingNameCursors.get(idToFocus);
+      try {
+        if (cur && typeof cur.start === "number" && typeof cur.end === "number") {
+          input.setSelectionRange(cur.start, cur.end);
+        } else {
+          const end = input.value.length;
+          input.setSelectionRange(end, end);
+        }
+      } catch {}
     }
   }
 }
