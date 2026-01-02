@@ -34,6 +34,7 @@ let localViewVisible = false;
 let cameraRequested = false;
 let vrMode = true;
 const vrModeCheckbox = document.getElementById("vrModeCheckbox");
+const localViewCheckbox = document.getElementById("localViewCheckbox");
 let knownPhones = [];
 
 function setVideoStream(videos, stream) {
@@ -148,6 +149,7 @@ function setLocalViewVisibility(visible) {
     if (!video) return;
     video.style.display = localViewVisible ? "" : "none";
   });
+  if (localViewCheckbox) localViewCheckbox.checked = localViewVisible;
   if (changed) sendStateUpdate();
 }
 
@@ -570,11 +572,9 @@ function handlePointerToggle(event) {
     // Request camera in response to user gesture
     getCameraStream().catch(() => {});
   }
-  if (controlOverlay && controlOverlay.contains(event.target) && overlayVisible) {
-    const interactive = event.target.closest("input, button, textarea");
-    if (interactive) {
-      return;
-    }
+  // If overlay is visible and the tap is inside it, do not toggle
+  if (overlayVisible && controlOverlay && controlOverlay.contains(event.target)) {
+    return;
   }
   toggleOverlayVisibility();
 }
@@ -595,6 +595,12 @@ if (receiverSelect) {
     ws.send(
       JSON.stringify({ type: "route", from: value || null, to: clientId })
     );
+  });
+}
+
+if (localViewCheckbox) {
+  localViewCheckbox.addEventListener("change", () => {
+    setLocalViewVisibility(!!localViewCheckbox.checked);
   });
 }
 
