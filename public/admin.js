@@ -6,6 +6,7 @@ const qrUrlEl = document.getElementById("qrUrl");
 const globalLocalView = document.getElementById("globalLocalView");
 const globalOverlay = document.getElementById("globalOverlay");
 const btnRandomizeSenders = document.getElementById("btnRandomizeSenders");
+const btnSelfRouteAll = document.getElementById("btnSelfRouteAll");
 
 let ws;
 let phones = [];
@@ -224,6 +225,9 @@ function renderPhones() {
   if (btnRandomizeSenders) {
     btnRandomizeSenders.disabled = phones.length < 2;
   }
+  if (btnSelfRouteAll) {
+    btnSelfRouteAll.disabled = phones.length === 0;
+  }
 }
 
 function handleRouteSelection(receiverId, senderId) {
@@ -437,4 +441,16 @@ function randomizeSenders() {
 
 if (btnRandomizeSenders) {
   btnRandomizeSenders.addEventListener("click", randomizeSenders);
+}
+
+function selfRouteAll() {
+  if (phones.length === 0) return;
+  setAdminError("");
+  phones.forEach((p) => {
+    handleRouteSelection(p.id, p.id);
+  });
+}
+
+if (btnSelfRouteAll) {
+  btnSelfRouteAll.addEventListener("click", selfRouteAll);
 }
