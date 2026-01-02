@@ -2,7 +2,6 @@ const connectionStatusEl = document.getElementById("connection-status");
 const deviceNameInput = document.getElementById("deviceName");
 const clientIdDisplay = document.getElementById("clientIdDisplay");
 const roleStateEl = document.getElementById("roleState");
-const peerInfoEl = document.getElementById("peerInfo");
 const errorDisplay = document.getElementById("errorDisplay");
 const controlOverlay = document.getElementById("control-overlay");
 const receiverSelect = document.getElementById("receiverSelect");
@@ -71,7 +70,6 @@ function updateRoleDisplay() {
   roleStateEl.textContent = sendingPeers.length
     ? `Sending to ${sendingPeers.join(", ")}`
     : "Not sending";
-  peerInfoEl.textContent = receiverPeerId ? `Receiving from ${receiverPeerId}` : "Not receiving";
 }
 
 function getStoredDeviceId() {

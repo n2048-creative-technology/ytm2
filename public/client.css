@@ -67,12 +67,14 @@ body.panorama .local.right {
   background: #000000bd;
   font-size: 1em;
   font-weight: 700;
-  top: 15%;
-  right: calc(50% + 10px);
+  top: 12px;
+  right: 12px;
   color: #fff;
   padding: 10px;
   transition: opacity 0.2s ease;
   width: 280px;
+  max-width: calc(100vw - 24px);
+  overflow: auto;
 }
 
 #control-overlay label {
