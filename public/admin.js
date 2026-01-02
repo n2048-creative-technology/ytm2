@@ -89,6 +89,22 @@ function renderPhones() {
     controlTd.appendChild(select);
     tr.appendChild(controlTd);
 
+    const localViewTd = document.createElement("td");
+    const showBtn = document.createElement("button");
+    showBtn.textContent = "Show";
+    showBtn.addEventListener("click", () => {
+      sendClientControl(phone.id, "set-local-view", { visible: true });
+    });
+    const hideBtn = document.createElement("button");
+    hideBtn.textContent = "Hide";
+    hideBtn.style.marginLeft = "6px";
+    hideBtn.addEventListener("click", () => {
+      sendClientControl(phone.id, "set-local-view", { visible: false });
+    });
+    localViewTd.appendChild(showBtn);
+    localViewTd.appendChild(hideBtn);
+    tr.appendChild(localViewTd);
+
     phonesTableBody.appendChild(tr);
   });
 
@@ -204,3 +220,18 @@ function initQrDisplay() {
 }
 
 initQrDisplay();
+
+function sendClientControl(targetId, action, params = {}) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    setAdminError("WebSocket not connected");
+    return;
+  }
+  ws.send(
+    JSON.stringify({
+      type: "client-control",
+      target: targetId,
+      action,
+      params
+    })
+  );
+}

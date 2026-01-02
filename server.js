@@ -248,6 +248,25 @@ wss.on("connection", (ws) => {
         console.log(`Signal ${message.signalType} ${client.id} -> ${target.id}`);
         break;
       }
+      case "client-control": {
+        if (client.role !== "admin") return;
+        const target = clients.get(message.target);
+        if (!target || target.role !== "phone") {
+          ws.send(JSON.stringify({ type: "error", message: "Invalid target" }));
+          return;
+        }
+        const action = message.action;
+        const params = message.params || {};
+        // Forward as a control message to the target phone
+        target.ws.send(
+          JSON.stringify({
+            type: "control",
+            action,
+            ...params
+          })
+        );
+        break;
+      }
       case "update-name": {
         if (client.role !== "phone") return;
         const newName =

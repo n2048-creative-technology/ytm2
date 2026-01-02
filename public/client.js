@@ -29,6 +29,7 @@ let isRegistered = false;
 let overlayVisible = false;
 const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
 const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
+let localViewVisible = true;
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -120,6 +121,14 @@ function setOverlayVisibility(visible) {
 
 function toggleOverlayVisibility() {
   setOverlayVisibility(!overlayVisible);
+}
+
+function setLocalViewVisibility(visible) {
+  localViewVisible = !!visible;
+  localVideos.forEach((video) => {
+    if (!video) return;
+    video.style.display = localViewVisible ? "" : "none";
+  });
 }
 
 async function getCameraStream() {
@@ -396,6 +405,9 @@ function connectWebSocket() {
               resetReceiver();
             }
             break;
+          case "set-local-view":
+            setLocalViewVisibility(!!data.visible);
+            break;
           case "reset":
             resetAllConnections();
             break;
@@ -453,6 +465,7 @@ initFromStorage();
 connectWebSocket();
 updateRoleDisplay();
 setOverlayVisibility(false);
+setLocalViewVisibility(true);
 getCameraStream().catch(() => {
   // Permission denied handled in getCameraStream via setError
 });
