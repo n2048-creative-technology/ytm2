@@ -122,10 +122,13 @@ function resetAllConnections() {
 }
 
 function setOverlayVisibility(visible) {
-  overlayVisible = visible;
+  const next = !!visible;
+  const changed = next !== overlayVisible;
+  overlayVisible = next;
   if (controlOverlay) {
     controlOverlay.classList.toggle("hidden", !overlayVisible);
   }
+  if (changed) sendStateUpdate();
 }
 
 function toggleOverlayVisibility() {
@@ -418,6 +421,11 @@ function connectWebSocket() {
               sendNameUpdate();
             }
             break;
+          case "set-overlay":
+            if (typeof data.visible === "boolean") {
+              setOverlayVisibility(!!data.visible);
+            }
+            break;
           case "reset-sender":
             if (data.peerId) {
               stopSendingToPeer(data.peerId);
@@ -513,7 +521,8 @@ function sendStateUpdate() {
   ws.send(
     JSON.stringify({
       type: "update-state",
-      localViewVisible
+      localViewVisible,
+      controlOverlayVisible: overlayVisible
     })
   );
 }

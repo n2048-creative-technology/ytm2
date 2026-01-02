@@ -67,7 +67,8 @@ function formatPhone(client) {
     sendingTo: sendingTargets,
     receivingFrom: client.receivingFrom,
     preview: client.previewData || null,
-    localViewVisible: client.localViewVisible !== false
+    localViewVisible: client.localViewVisible !== false,
+    controlOverlayVisible: !!client.controlOverlayVisible
   };
 }
 
@@ -175,7 +176,8 @@ wss.on("connection", (ws) => {
         sendingTo: new Set(),
         receivingFrom: null,
         previewData: null,
-        localViewVisible: false
+        localViewVisible: false,
+        controlOverlayVisible: false
       });
       ws.send(JSON.stringify({ type: "registered", id }));
       console.log(`Registered ${role} ${id}`);
@@ -278,8 +280,11 @@ wss.on("connection", (ws) => {
         if (client.role !== "phone") return;
         if (typeof message.localViewVisible === "boolean") {
           client.localViewVisible = message.localViewVisible;
-          broadcastPhoneList();
         }
+        if (typeof message.controlOverlayVisible === "boolean") {
+          client.controlOverlayVisible = message.controlOverlayVisible;
+        }
+        broadcastPhoneList();
         break;
       }
       case "update-name": {

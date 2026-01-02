@@ -164,6 +164,17 @@ function renderPhones() {
     localViewTd.appendChild(checkbox);
     tr.appendChild(localViewTd);
 
+    const overlayTd = document.createElement("td");
+    const overlayCheckbox = document.createElement("input");
+    overlayCheckbox.type = "checkbox";
+    overlayCheckbox.checked = !!phone.controlOverlayVisible;
+    overlayCheckbox.title = "Toggle control overlay";
+    overlayCheckbox.addEventListener("change", () => {
+      sendClientControl(phone.id, "set-overlay", { visible: overlayCheckbox.checked });
+    });
+    overlayTd.appendChild(overlayCheckbox);
+    tr.appendChild(overlayTd);
+
     phonesTableBody.appendChild(tr);
   });
 
