@@ -80,6 +80,17 @@ body.panorama .local.right {
   margin-bottom: 4px;
 }
 
+#control-overlay .inline-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#control-overlay .inline-control input[type="checkbox"] {
+  margin: 0;
+}
+
 #control-overlay input {
   width: 100%;
   padding: 6px 8px;
