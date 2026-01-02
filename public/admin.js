@@ -8,6 +8,8 @@ let ws;
 let phones = [];
 const previewCache = new Map();
 const previewElements = new Map();
+const editingNameIds = new Set(); // ids currently being edited
+const pendingNameEdits = new Map(); // id -> pending string value
 
 function updateStatus(text) {
   statusEl.textContent = `Status: ${text}`;
@@ -46,26 +48,47 @@ function renderPhones() {
     tr.appendChild(idTd);
 
     const nameTd = document.createElement("td");
-    const nameInput = document.createElement("input");
-    nameInput.type = "text";
-    nameInput.value = phone.name || "";
-    nameInput.size = 14;
-    const saveBtn = document.createElement("button");
-    saveBtn.textContent = "Save";
-    saveBtn.style.marginLeft = "6px";
-    const doSave = () => {
-      const newName = (nameInput.value || "").trim();
-      if (!newName) return;
-      sendClientControl(phone.id, "set-name", { name: newName });
-    };
-    saveBtn.addEventListener("click", doSave);
-    nameInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        doSave();
-      }
-    });
-    nameTd.appendChild(nameInput);
-    nameTd.appendChild(saveBtn);
+    if (editingNameIds.has(phone.id)) {
+      const current = pendingNameEdits.has(phone.id)
+        ? pendingNameEdits.get(phone.id)
+        : (phone.name || "");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = current;
+      input.size = 14;
+      input.addEventListener("input", () => {
+        pendingNameEdits.set(phone.id, input.value);
+      });
+      const okBtn = document.createElement("button");
+      okBtn.textContent = "OK";
+      okBtn.style.marginLeft = "6px";
+      okBtn.addEventListener("click", () => {
+        const newName = (input.value || "").trim();
+        if (!newName) return;
+        // send change to client
+        sendClientControl(phone.id, "set-name", { name: newName });
+        // optimistically update local list
+        const idx = phones.findIndex((p) => p.id === phone.id);
+        if (idx >= 0) phones[idx].name = newName;
+        // exit edit mode
+        editingNameIds.delete(phone.id);
+        pendingNameEdits.delete(phone.id);
+        renderPhones();
+      });
+      nameTd.appendChild(input);
+      nameTd.appendChild(okBtn);
+    } else {
+      const label = document.createElement("span");
+      label.textContent = phone.name || "";
+      label.style.cursor = "pointer";
+      label.title = "Click to edit name";
+      label.addEventListener("click", () => {
+        editingNameIds.add(phone.id);
+        pendingNameEdits.set(phone.id, phone.name || "");
+        renderPhones();
+      });
+      nameTd.appendChild(label);
+    }
     tr.appendChild(nameTd);
 
     const statusTd = document.createElement("td");
