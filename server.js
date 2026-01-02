@@ -170,7 +170,7 @@ wss.on("connection", (ws) => {
         sendingTo: new Set(),
         receivingFrom: null,
         previewData: null,
-        localViewVisible: true
+        localViewVisible: false
       });
       ws.send(JSON.stringify({ type: "registered", id }));
       console.log(`Registered ${role} ${id}`);

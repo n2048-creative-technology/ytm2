@@ -29,7 +29,7 @@ let isRegistered = false;
 let overlayVisible = false;
 const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
 const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
-let localViewVisible = true;
+let localViewVisible = false;
 
 function setVideoStream(videos, stream) {
   videos.forEach((video) => {
@@ -386,6 +386,7 @@ function connectWebSocket() {
         localStorage.setItem(DEVICE_ID_KEY, clientId);
         clientIdDisplay.textContent = `Client ID: ${clientId}`;
         sendNameUpdate();
+        sendStateUpdate();
         startNameHeartbeat();
         break;
       case "control":
@@ -476,7 +477,7 @@ initFromStorage();
 connectWebSocket();
 updateRoleDisplay();
 setOverlayVisibility(false);
-setLocalViewVisibility(true);
+setLocalViewVisibility(false);
 getCameraStream().catch(() => {
   // Permission denied handled in getCameraStream via setError
 });
