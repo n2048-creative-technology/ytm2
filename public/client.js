@@ -26,7 +26,7 @@ let previewTimer = null;
 let nameUpdateTimeout = null;
 let nameHeartbeatInterval = null;
 let isRegistered = false;
-let overlayVisible = true;
+let overlayVisible = false;
 const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
 const localVideos = [localVideoLeft, localVideoRight].filter(Boolean);
 
@@ -452,6 +452,7 @@ registerServiceWorker();
 initFromStorage();
 connectWebSocket();
 updateRoleDisplay();
+setOverlayVisibility(false);
 getCameraStream().catch(() => {
   // Permission denied handled in getCameraStream via setError
 });
