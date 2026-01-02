@@ -24,6 +24,7 @@ let previewVideo = null;
 let previewCanvas = null;
 let previewTimer = null;
 let nameUpdateTimeout = null;
+let nameHeartbeatInterval = null;
 let isRegistered = false;
 let overlayVisible = true;
 const remoteVideos = [remoteVideoLeft, remoteVideoRight].filter(Boolean);
@@ -330,6 +331,21 @@ function scheduleNameUpdate() {
   nameUpdateTimeout = setTimeout(sendNameUpdate, 400);
 }
 
+function startNameHeartbeat() {
+  if (nameHeartbeatInterval) clearInterval(nameHeartbeatInterval);
+  nameHeartbeatInterval = setInterval(() => {
+    if (!isRegistered || !ws || ws.readyState !== WebSocket.OPEN) return;
+    sendNameUpdate();
+  }, 5000);
+}
+
+function stopNameHeartbeat() {
+  if (nameHeartbeatInterval) {
+    clearInterval(nameHeartbeatInterval);
+    nameHeartbeatInterval = null;
+  }
+}
+
 function connectWebSocket() {
   const protocol = location.protocol === "https:" ? "wss://" : "ws://";
   ws = new WebSocket(protocol + location.host + "/ws");
@@ -343,6 +359,7 @@ function connectWebSocket() {
   ws.addEventListener("close", () => {
     updateStatus("Disconnected");
     isRegistered = false;
+    stopNameHeartbeat();
     resetAllConnections();
     setTimeout(connectWebSocket, 3000);
   });
@@ -356,6 +373,7 @@ function connectWebSocket() {
         localStorage.setItem(DEVICE_ID_KEY, clientId);
         clientIdDisplay.textContent = `Client ID: ${clientId}`;
         sendNameUpdate();
+        startNameHeartbeat();
         break;
       case "control":
         setError("");
