@@ -393,6 +393,13 @@ function connectWebSocket() {
           case "be-receiver":
             prepareReceiver(data.peerId);
             break;
+          case "set-name":
+            if (typeof data.name === "string") {
+              deviceNameInput.value = data.name;
+              localStorage.setItem(DEVICE_NAME_KEY, deviceNameInput.value);
+              sendNameUpdate();
+            }
+            break;
           case "reset-sender":
             if (data.peerId) {
               stopSendingToPeer(data.peerId);

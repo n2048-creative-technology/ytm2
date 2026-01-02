@@ -46,7 +46,26 @@ function renderPhones() {
     tr.appendChild(idTd);
 
     const nameTd = document.createElement("td");
-    nameTd.textContent = phone.name;
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = phone.name || "";
+    nameInput.size = 14;
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save";
+    saveBtn.style.marginLeft = "6px";
+    const doSave = () => {
+      const newName = (nameInput.value || "").trim();
+      if (!newName) return;
+      sendClientControl(phone.id, "set-name", { name: newName });
+    };
+    saveBtn.addEventListener("click", doSave);
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        doSave();
+      }
+    });
+    nameTd.appendChild(nameInput);
+    nameTd.appendChild(saveBtn);
     tr.appendChild(nameTd);
 
     const statusTd = document.createElement("td");
