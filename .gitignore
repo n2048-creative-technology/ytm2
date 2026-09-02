@@ -1,0 +1,10 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Editor backups
+*.save
+*.swp
+
+# OS
+.DS_Store

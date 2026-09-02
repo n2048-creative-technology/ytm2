@@ -1,7 +1,0 @@
-const path = require("path");
-
-module.exports = {
-  httpsPort: process.env.HTTP_PORT ? Number(process.env.HTTPS_PORT) : 8443,
-  httpsKeyPath: process.env.HTTPS_KEY_PATH || path.resolve("./certs/server.key"),
-  httpsCertPath: process.env.HTTPS_CERT_PATH || path.resolve("./certs/server.crt")
-};
